@@ -1,0 +1,37 @@
+name: Sync FPF from upstream
+
+on:
+  schedule:
+    # Ежедневно в 03:17 UTC (~06:17 по Москве)
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fetch upstream (ailev/FPF)
+        run: |
+          git remote add upstream https://github.com/ailev/FPF.git
+          git fetch upstream main
+
+      - name: Hard-sync main to upstream and keep workflow
+        run: |
+          git config user.name "fpf-sync-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp .github/workflows/sync-fpf.yml /tmp/sync-fpf.yml
+          git reset --hard upstream/main
+          mkdir -p .github/workflows
+          cp /tmp/sync-fpf.yml .github/workflows/sync-fpf.yml
+          git add .github/workflows/sync-fpf.yml
+          git commit -m "chore: re-add sync workflow after upstream sync"
+          git push --force-with-lease origin main
